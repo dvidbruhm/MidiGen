@@ -44,9 +44,8 @@ def read_midi(file):
             # print(msg)
             if not msg.is_meta and msg.type == "note_on" or msg.type == "note_off":
                 # print(msg)
-                if msg.time != 0:
-                    notes.append(int(msg.note) % 12)
-                    durations.append(int(msg.time))
+                notes.append(int(msg.note) % 12)
+                durations.append(int(msg.time))
         if len(notes) > 1:
             tracks_notes.append(notes)
             tracks_durations.append(durations)
@@ -75,9 +74,18 @@ def update_prob_table(prob_table, duration_prob, tracks_notes, tracks_durations)
 
     return prob_table, duration_table
 
+def print_prob_table(prob_table):
+    print("A\tA#\tB\tC\tC#\tD\tD#\tE\tF\tF#\tG\tG#")
+    for row in prob_table:
+        row_str = ""
+        for prob in prob_table[row]:
+            row_str += str(round(prob, 2)) + "\t"
+        print(row_str)
+
 def normalize_prob_table(prob_table):
     for note in range(len(prob_table)):
-        prob_table[note] = [float(i)/sum(prob_table[note]) for i in prob_table[note]]
+
+        prob_table[note] = [float(i)/sum(prob_table[note]) if sum(prob_table[note]) > 0 else 0 for i in prob_table[note]]
     return prob_table
 
 def normalize_duration_table(duration_table):
@@ -106,7 +114,7 @@ def create_markov_midi(path, prob_table, duration_table, nb_notes, speed, tracks
             next_note = numpy.random.choice(range(0, 12), p=prob_table[prev_note])
             note_duration = numpy.random.choice(duration_table[0], p=duration_table[1])
             track.append(Message('note_on', note=next_note + base_tone, velocity=100, time=0))
-            track.append(Message('note_off', note=next_note + base_tone, velocity=0, time=60))
+            track.append(Message('note_off', note=next_note + base_tone, velocity=0, time=note_duration))
             prev_note = next_note
 
     new_song.save("gen/gen.mid")
@@ -114,13 +122,14 @@ def create_markov_midi(path, prob_table, duration_table, nb_notes, speed, tracks
 if __name__ == "__main__":
     prob_table, duration_prob = init()
 
-    for i, file in enumerate(glob.glob("data/*.mid")):
+    for i, file in enumerate(glob.glob("data/satie_gymnopedie_no1.mid")):
         print("\n-------- Midi {} ---------\n".format(i))
+        print_midi(file)
         tracks_notes, tracks_durations = read_midi(file)
         prob_table, duration_table = update_prob_table(prob_table, duration_prob, tracks_notes, tracks_durations)
 
     prob_table = normalize_prob_table(prob_table)
     duration_table = normalize_duration_table(duration_table)
-    create_markov_midi("gen/gen.mid", prob_table, duration_table, 100, 120, tracks=1)
+    create_markov_midi("gen/gen.mid", prob_table, duration_table, 100, 240, tracks=1)
     
-    print_midi("gen/gen.mid")
+    print_prob_table(prob_table)
