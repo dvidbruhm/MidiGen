@@ -44,8 +44,9 @@ def read_midi(file):
             # print(msg)
             if not msg.is_meta and msg.type == "note_on" or msg.type == "note_off":
                 # print(msg)
-                notes.append(int(msg.note) % 12)
-                durations.append(int(msg.time))
+                if msg.time != 0:
+                    notes.append(int(msg.note) % 12)
+                    durations.append(int(msg.time))
         if len(notes) > 1:
             tracks_notes.append(notes)
             tracks_durations.append(durations)
