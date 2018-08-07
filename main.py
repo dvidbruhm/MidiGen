@@ -1,5 +1,4 @@
 from mido import MidiFile, MidiTrack, Message
-import matplotlib.pyplot as plt
 import random
 import numpy
 import glob
@@ -32,7 +31,7 @@ def print_midi(file):
 
 def read_midi(file):
     midi = MidiFile(file)
-
+    print("Ticks per beat: ", midi.ticks_per_beat)
     tracks_notes = []
     tracks_durations = []
     
@@ -40,12 +39,14 @@ def read_midi(file):
         print('Track {}: {}'.format(i, track.name))
         notes = []
         durations = []
-        for msg in track[::2]:
+        for msg in track:
             # print(msg)
             if not msg.is_meta and msg.type == "note_on" or msg.type == "note_off":
                 # print(msg)
-                notes.append(int(msg.note) % 12)
+                notes.append(int(msg.note))
                 durations.append(int(msg.time))
+            elif msg.type == "key_signature":
+                print("Key signature: ", msg)
         if len(notes) > 1:
             tracks_notes.append(notes)
             tracks_durations.append(durations)
@@ -57,7 +58,10 @@ def update_prob_table(prob_table, duration_prob, tracks_notes, tracks_durations)
         for i in range(1, len(notes)):
             note = notes[i]
             prev_note = notes[i - 1]
-            prob_table[prev_note][note] += 1
+            if prev_note in prob_table:
+                prob_table[prev_note][note] += 1
+            else:
+                prob_table[prev_note][note] = 1
     
     for durations in tracks_durations:
         for duration in durations:
@@ -122,9 +126,9 @@ def create_markov_midi(path, prob_table, duration_table, nb_notes, speed, tracks
 if __name__ == "__main__":
     prob_table, duration_prob = init()
 
-    for i, file in enumerate(glob.glob("data/satie_gymnopedie_no1.mid")):
+    for i, file in enumerate(glob.glob("data/fp-1all.mid")):
         print("\n-------- Midi {} ---------\n".format(i))
-        print_midi(file)
+        # print_midi(file)
         tracks_notes, tracks_durations = read_midi(file)
         prob_table, duration_table = update_prob_table(prob_table, duration_prob, tracks_notes, tracks_durations)
 
