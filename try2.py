@@ -6,7 +6,7 @@ class MarkovChain(dict):
     def __init__(self, order):
         self.order = order
     
-    def create(self, chords):
+    def update(self, chords):
         i = self.order
 
         while i < len(chords):
@@ -30,8 +30,6 @@ class MarkovChain(dict):
             
             i += 1
 
-        self._normalize_probs()
-
     def _chords_to_chain_key(self, chords):
         key = ""
         for chord in chords:
@@ -46,7 +44,7 @@ class MarkovChain(dict):
         key = key[:-1]
         return key
 
-    def _normalize_probs(self):
+    def normalize_probs(self):
         for key in self:
             self[key] = { x : self[key][x] / sum(list(self[key].values())) for x in self[key] }
 
@@ -223,7 +221,7 @@ def write_chord(track, chord):
         if i == 0:
             track.append(Message('note_off', note=note_number, velocity=0, time=duration))
         else:
-            track.append(Message('note_off', note=note_number, velocity=0, time=duration))
+            track.append(Message('note_off', note=note_number, velocity=0, time=0))
         i += 1
 
 
@@ -257,9 +255,15 @@ def pretty(d, indent=0):
       else:
          print('\t' * (indent+1) + str(value))
 
-chords = read_midi("data/chpn_op10_e12.mid")
-
 chain = MarkovChain(2)
-chain.create(chords)
+
+chords = read_midi("data/chpn-p4.mid")
+chain.update(chords)
+
+chords = read_midi("data/chpn_op10_e12.mid")
+chain.update(chords)
+
+chain.normalize_probs()
+
 chords = create_midi_data(chain)
 write_midi('gen/gen.mid', chords)
