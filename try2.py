@@ -296,16 +296,21 @@ def run(command):
     os.system(command)
 
 if __name__ == "__main__":  
-    chain = MarkovChain(1)
+    chain = MarkovChain(2)
 
-    for midi_file in glob.glob("data/chpn_op10_e12.mid"): 
+    for midi_file in glob.glob("data/prokofiev/prokofiev_vision_fugitives_22_(c)ungar.mid"): 
         chords = read_midi(midi_file)
         chain.update(chords)
 
     chain.normalize_probs()
     
     for i in range(1):
-        chords = create_midi_data(chain, 500)
+        piece = []
+        sec_a = create_midi_data(chain, 100)
+        sec_b = create_midi_data(chain, 100)
+        sec_c = create_midi_data(chain, 100)
+        piece += sec_a + sec_b + sec_a + sec_c + sec_a + sec_b + sec_a
+
         name = "gen/gen" + str(i)
-        write_midi(name + ".mid", chords, instrument=0)
+        write_midi(name + ".mid", piece, instrument=0)
         run("mscore \"" + name + ".mid\" -o \"" + name + ".pdf\"")
