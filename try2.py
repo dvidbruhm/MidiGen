@@ -1,4 +1,5 @@
 import numpy
+import glob
 
 from mido import MidiFile, MidiTrack, Message
 
@@ -136,32 +137,40 @@ def print_track(track):
     print("------------------")
 
 def read_midi(file_name):
+    print("Reading file : ", file_name)
     midi = MidiFile(file_name)
+
     print("Ticks per second: ", midi.ticks_per_beat)
     notes = []
+
     for i, track in enumerate(midi.tracks):
+
         current_time = 0
-        
         notes_only_track = clean_track(track, ["note_on", "note_off"])
+
         for i, msg in enumerate(notes_only_track):
+
             current_time += msg.time / midi.ticks_per_beat * 10
+
             if msg.type == "note_on" and msg.velocity != 0:
+
                 current_note = msg.note
                 current_note_start_time = current_time
                 current_note_stop_time = current_note_start_time
+
                 for j, msg2 in enumerate(notes_only_track[i+1:]):
+
                     current_note_stop_time += msg2.time / midi.ticks_per_beat * 10
+
                     if (msg2.note == current_note and msg2.type == "note_off") or \
                        (msg2.note == current_note and msg2.type == "note_on" and msg2.velocity == 0):
+
                         notes.append(Note(current_note, current_note_stop_time - current_note_start_time, current_note_start_time))
                         break
 
     print("Number of notes: ", len(notes))
     chords = notes_to_chords(notes)
-
-    #for chord in chords:
-    #    print(chord)
-
+    
     return chords
 
 def notes_to_chords(notes):
@@ -256,14 +265,14 @@ def write_chord(track, chord):
         i += 1
 
 
-def write_midi(file_name, chords):
+def write_midi(file_name, chords, instrument=0):
     generated_midi = MidiFile()
     generated_midi.ticks_per_beat = 10
 
     track = MidiTrack()
     generated_midi.tracks.append(track)
 
-    track.append(Message('program_change', program=0, channel=0, time=0))
+    track.append(Message('program_change', program=instrument, channel=0, time=0))
     track.append(Message('control_change', control=10, channel=0, value=64, time=0))
 
     for chord in chords:
@@ -271,12 +280,6 @@ def write_midi(file_name, chords):
 
     generated_midi.save(file_name)
     print("Midi file : ", file_name)
-
-def create_table(notes):
-    table = {}
-    for note in notes:
-        pass
-    return table
 
 def pretty(d, indent=0):
    for key, value in d.items():
@@ -286,15 +289,23 @@ def pretty(d, indent=0):
       else:
          print('\t' * (indent+2) + str(value))
 
-chain = MarkovChain(2)
+def run(command):
+    print(command)
 
-chords = read_midi("data/chpn-p4.mid")
-chain.update(chords)
+    import os
+    os.system(command)
 
-chords = read_midi("data/chpn_op10_e12.mid")
-chain.update(chords)
+if __name__ == "__main__":  
+    chain = MarkovChain(1)
 
-chain.normalize_probs()
+    for midi_file in glob.glob("data/chpn_op10_e12.mid"): 
+        chords = read_midi(midi_file)
+        chain.update(chords)
 
-chords = create_midi_data(chain)
-write_midi('gen/gen.mid', chords)
+    chain.normalize_probs()
+    
+    for i in range(1):
+        chords = create_midi_data(chain, 500)
+        name = "gen/gen" + str(i)
+        write_midi(name + ".mid", chords, instrument=0)
+        run("mscore \"" + name + ".mid\" -o \"" + name + ".pdf\"")
