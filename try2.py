@@ -204,10 +204,10 @@ def create_midi_data(markov_chain, nb_notes=100):
     random_start = numpy.random.choice(list(markov_chain.keys()))
     random_duration = numpy.random.choice(list(markov_chain.durations.keys()))
 
-    for chord_name in random_start.split(":"):
-            
-        generated_chords.append(name_to_chord(chord_name, int(random_duration), current_time))
-        current_time += float(random_duration)
+    for chord_name, duration in zip(random_start.split(":"), random_duration.split(":")):
+
+        generated_chords.append(name_to_chord(chord_name, int(duration), current_time))
+        current_time += float(duration)
 
     for i in range(markov_chain.order, nb_notes):
         previous_chords = []
@@ -216,9 +216,14 @@ def create_midi_data(markov_chain, nb_notes=100):
             previous_chords.append(generated_chords[j])
         
         note_key, duration_key = chords_to_key(previous_chords)
-
-        next_chord = numpy.random.choice(list(markov_chain[note_key].keys()), p=list(markov_chain[note_key].values()))
-        next_duration = numpy.random.choice(list(markov_chain.durations[duration_key].keys()), p=list(markov_chain.durations[duration_key].values()))
+        
+        try:
+            next_chord = numpy.random.choice(list(markov_chain[note_key].keys()), p=list(markov_chain[note_key].values()))
+            next_duration = numpy.random.choice(list(markov_chain.durations[duration_key].keys()), p=list(markov_chain.durations[duration_key].values()))
+        except KeyError as err:
+            print("Choosing random chord for : ", i)
+            next_chord = numpy.random.choice(list(markov_chain.keys())).split(":")[-1]
+            next_duration = numpy.random.choice(list(markov_chain.durations.keys())).split(":")[-1]
 
         generated_chords.append(name_to_chord(next_chord, int(next_duration), current_time))
         current_time += float(next_duration)
@@ -281,10 +286,10 @@ def pretty(d, indent=0):
       else:
          print('\t' * (indent+2) + str(value))
 
-chain = MarkovChain(1)
+chain = MarkovChain(2)
 
-#chords = read_midi("data/chpn-p4.mid")
-#chain.update(chords)
+chords = read_midi("data/chpn-p4.mid")
+chain.update(chords)
 
 chords = read_midi("data/chpn_op10_e12.mid")
 chain.update(chords)
